@@ -1,5 +1,6 @@
 use crate::database::repositories::{
-    meeting::MeetingsRepository, setting::SettingsRepository, summary::SummaryProcessesRepository,
+    meeting::MeetingsRepository, meeting_notes::MeetingNotesRepository, setting::SettingsRepository,
+    summary::SummaryProcessesRepository,
 };
 use crate::summary::llm_client::LLMProvider;
 use crate::summary::language_detection::detect_summary_language;
@@ -63,6 +64,10 @@ const ENGLISH_CACHE_FIELD: &str = "english_cache";
 struct SummaryCacheSource {
     transcript_fingerprint: String,
     custom_prompt_fingerprint: String,
+    /// Fork: the user's notes. Empty when there are none, which also matches
+    /// caches written before notes existed.
+    #[serde(default)]
+    notes_fingerprint: String,
     template_id: String,
     template_fingerprint: String,
     token_threshold: usize,
@@ -112,6 +117,7 @@ fn build_summary_cache_source(
     SummaryCacheSource {
         transcript_fingerprint: stable_text_fingerprint(text),
         custom_prompt_fingerprint: stable_text_fingerprint(custom_prompt),
+        notes_fingerprint: String::new(),
         template_id: template_id.to_string(),
         template_fingerprint: template_fingerprint.to_string(),
         token_threshold,
@@ -501,7 +507,19 @@ impl SummaryService {
         };
         let template_fingerprint = template_cache_fingerprint(&template);
 
-        let cache_source = build_summary_cache_source(
+        // Fork: the notepad. Notes steer the summary ("Enhance").
+        let user_notes = match MeetingNotesRepository::get(&pool, &meeting_id).await {
+            Ok(notes) => notes.unwrap_or_default(),
+            Err(e) => {
+                warn!("Could not load notes for meeting_id={}: {}. Summarising without them.", meeting_id, e);
+                String::new()
+            }
+        };
+        if !user_notes.is_empty() {
+            info!("📝 Including {} chars of the user's notes", user_notes.len());
+        }
+
+        let mut cache_source = build_summary_cache_source(
             &text,
             &custom_prompt,
             &template_id,
@@ -515,6 +533,10 @@ impl SummaryService {
             custom_openai_temperature,
             custom_openai_top_p,
         );
+
+        if !user_notes.is_empty() {
+            cache_source.notes_fingerprint = stable_text_fingerprint(&user_notes);
+        }
 
         let cached_english = match SummaryProcessesRepository::get_summary_data(&pool, &meeting_id).await {
             Err(e) => {
@@ -551,6 +573,7 @@ impl SummaryService {
             &final_api_key,
             &text,
             &custom_prompt,
+            &user_notes,
             &template_id,
             &template,
             token_threshold,
@@ -877,6 +900,42 @@ mod tests {
             extract_cached_english_markdown(&raw, &source, Some("fr")).unwrap(),
             None
         );
+    }
+
+    #[test]
+    fn test_changed_notes_reject_cache_and_old_caches_still_match_without_notes() {
+        let source = sample_cache_source();
+        let raw = build_summary_result_json(
+            "# Reunion\n## Points\nBonjour",
+            "# Meeting\n## Points\nHello",
+            source.clone(),
+            Some("fr"),
+            false,
+            false,
+        )
+        .unwrap()
+        .to_string();
+        assert!(extract_cached_english_markdown(&raw, &source, Some("de")).unwrap().is_some());
+
+        let mut with_notes = source.clone();
+        with_notes.notes_fingerprint = stable_text_fingerprint("- hire Dana");
+        assert_eq!(extract_cached_english_markdown(&raw, &with_notes, Some("de")).unwrap(), None);
+
+        // A cache written before notes existed has no notes_fingerprint field.
+        let mut legacy: serde_json::Value = serde_json::from_str(&raw).unwrap();
+        fn strip(v: &mut serde_json::Value) {
+            match v {
+                serde_json::Value::Object(map) => {
+                    map.remove("notes_fingerprint");
+                    map.values_mut().for_each(strip);
+                }
+                serde_json::Value::Array(items) => items.iter_mut().for_each(strip),
+                _ => {}
+            }
+        }
+        strip(&mut legacy);
+        assert!(!legacy.to_string().contains("notes_fingerprint"));
+        assert!(extract_cached_english_markdown(&legacy.to_string(), &source, Some("de")).unwrap().is_some());
     }
 
     #[test]

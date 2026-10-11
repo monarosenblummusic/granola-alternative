@@ -826,6 +826,8 @@ pub fn run() {
             audio::speaker_identification::identify_speakers_command,
             audio::speaker_identification::api_get_meeting_speakers,
             audio::speaker_identification::api_rename_speaker,
+            database::commands::api_get_meeting_notes,
+            database::commands::api_save_meeting_notes,
             // Import audio commands
             audio::import::select_and_validate_audio_command,
             audio::import::validate_audio_file_command,

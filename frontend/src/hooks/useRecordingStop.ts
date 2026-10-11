@@ -9,6 +9,7 @@ import { storageService } from '@/services/storageService';
 import { transcriptService } from '@/services/transcriptService';
 import Analytics from '@/lib/analytics';
 import { autoIdentifySpeakers } from '@/lib/speakerIdentification';
+import { attachNotesDraft } from '@/lib/meetingNotes';
 import {
   applyPinnedSummaryLanguageToMeeting,
   detectAndCacheSummaryLanguage,
@@ -289,6 +290,9 @@ export function useRecordingStop(
               });
             }
           }
+
+          // Fork: move the notepad onto the meeting before the summary starts.
+          await attachNotesDraft(meetingId);
 
           console.log('✅ Successfully saved COMPLETE meeting with ID:', meetingId);
           console.log('   Transcripts:', freshTranscripts.length);

@@ -4,3 +4,4 @@ pub mod summary;
 pub mod transcript;
 pub mod transcript_chunk;
 pub mod speaker_name;
+pub mod meeting_notes;

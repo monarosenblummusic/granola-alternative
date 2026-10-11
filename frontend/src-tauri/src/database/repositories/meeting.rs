@@ -271,6 +271,7 @@ async fn delete_meeting_with_transaction(
 
     // Fork: speaker names for this meeting
     super::speaker_name::SpeakerNameRepository::delete_for_meeting(&mut *transaction, meeting_id).await?;
+    super::meeting_notes::MeetingNotesRepository::delete_for_meeting(&mut *transaction, meeting_id).await?;
 
     // 4. Finally, delete the meeting
     let result = sqlx::query("DELETE FROM meetings WHERE id = ?")

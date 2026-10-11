@@ -10,6 +10,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { indexedDBService, MeetingMetadata, StoredTranscript } from '@/services/indexedDBService';
 import { storageService } from '@/services/storageService';
 import { applyPinnedSummaryLanguageToMeeting } from '@/lib/summary-language-preferences';
+import { attachNotesDraft } from '@/lib/meetingNotes';
 import { toast } from 'sonner';
 
 interface AudioRecoveryStatus {
@@ -184,6 +185,9 @@ export function useTranscriptRecovery(): UseTranscriptRecoveryReturn {
       );
 
       const savedMeetingId = saveResponse.meeting_id;
+
+      // Fork: notes typed before the crash are still in the notepad draft.
+      await attachNotesDraft(savedMeetingId);
 
       try {
         await applyPinnedSummaryLanguageToMeeting(savedMeetingId);

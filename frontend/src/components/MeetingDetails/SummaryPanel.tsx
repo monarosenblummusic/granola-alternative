@@ -6,6 +6,7 @@ import { EmptyStateSummary } from '@/components/EmptyStateSummary';
 import { ModelConfig } from '@/components/ModelSettingsModal';
 import { SummaryGeneratorButtonGroup } from './SummaryGeneratorButtonGroup';
 import { SummaryUpdaterButtonGroup } from './SummaryUpdaterButtonGroup';
+import { MyNotesSection } from './MyNotesSection';
 import Analytics from '@/lib/analytics';
 import { useEffect, useRef, useState, RefObject } from 'react';
 import { toast } from 'sonner';
@@ -278,6 +279,15 @@ export function SummaryPanel({
           )}
         </div>
       </div>
+
+      {/* Fork: the user's notepad; Enhance builds the AI notes from it */}
+      <MyNotesSection
+        meetingId={meeting.id}
+        hasSummary={hasSummary}
+        canEnhance={transcripts.length > 0 && modelConfig.provider !== null && modelConfig.model !== null}
+        isEnhancing={isSummaryLoading}
+        onEnhance={() => onGenerateSummary(customPrompt)}
+      />
 
       {isSummaryLoading ? (
         <div className="flex items-center justify-center flex-1">

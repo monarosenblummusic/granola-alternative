@@ -276,3 +276,32 @@ pub async fn open_database_folder(app: AppHandle) -> Result<(), String> {
     info!("Opened database folder: {}", folder_path);
     Ok(())
 }
+
+/// Fork: largest notepad we accept (about 50 pages of text).
+const MAX_NOTES_CHARS: usize = 200_000;
+
+/// Fork: the meeting's notepad text, if any.
+#[tauri::command]
+pub async fn api_get_meeting_notes(
+    state: tauri::State<'_, AppState>,
+    meeting_id: String,
+) -> Result<Option<String>, String> {
+    crate::database::repositories::meeting_notes::MeetingNotesRepository::get(state.db_manager.pool(), &meeting_id)
+        .await
+        .map_err(|e| format!("Could not load notes: {}", e))
+}
+
+/// Fork: save the meeting's notepad text. Blank text deletes the notes.
+#[tauri::command]
+pub async fn api_save_meeting_notes(
+    state: tauri::State<'_, AppState>,
+    meeting_id: String,
+    notes: String,
+) -> Result<(), String> {
+    if notes.chars().count() > MAX_NOTES_CHARS {
+        return Err("Notes are too long to save.".to_string());
+    }
+    crate::database::repositories::meeting_notes::MeetingNotesRepository::save(state.db_manager.pool(), &meeting_id, &notes)
+        .await
+        .map_err(|e| format!("Could not save notes: {}", e))
+}

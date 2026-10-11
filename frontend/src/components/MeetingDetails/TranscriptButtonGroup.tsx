@@ -163,7 +163,7 @@ export function TranscriptButtonGroup({
             title="Retranscribe to enhance your recorded audio"
           >
             <RefreshCw className="@[22rem]:mr-2" size={18} />
-            <span className="hidden @[22rem]:inline">Enhance</span>
+            <span className="hidden @[22rem]:inline">Retranscribe</span>
           </Button>
         )}
       </ButtonGroup>
