@@ -27,6 +27,7 @@ export function TranscriptSettings({ transcriptModelConfig, setTranscriptModelCo
     const [isApiKeyLocked, setIsApiKeyLocked] = useState<boolean>(true);
     const [isLockButtonVibrating, setIsLockButtonVibrating] = useState<boolean>(false);
     const [uiProvider, setUiProvider] = useState<TranscriptModelProps['provider']>(transcriptModelConfig.provider);
+    const [cloudSaveState, setCloudSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
     // Sync uiProvider when backend config changes (e.g., after model selection or initial load)
     useEffect(() => {
@@ -53,12 +54,32 @@ export function TranscriptSettings({ transcriptModelConfig, setTranscriptModelCo
     const modelOptions = {
         localWhisper: [], // Model selection handled by ModelManager component
         parakeet: [], // Model selection handled by ParakeetModelManager component
-        deepgram: ['nova-2-phonecall'],
+        deepgram: ['nova-3', 'nova-2-meeting'],
         elevenLabs: ['eleven_multilingual_v2'],
         groq: ['llama-3.3-70b-versatile'],
         openai: ['gpt-4o'],
     };
-    const requiresApiKey = transcriptModelConfig.provider === 'deepgram' || transcriptModelConfig.provider === 'elevenLabs' || transcriptModelConfig.provider === 'openai' || transcriptModelConfig.provider === 'groq';
+    const requiresApiKey = uiProvider === 'deepgram' || uiProvider === 'elevenLabs' || uiProvider === 'openai' || uiProvider === 'groq';
+
+    // Fork: persist the cloud provider, model and key. Upstream left cloud
+    // providers disabled, so nothing here ever saved the key.
+    const saveDeepgramConfig = async () => {
+        const model = modelOptions.deepgram.includes(transcriptModelConfig.model)
+            ? transcriptModelConfig.model
+            : modelOptions.deepgram[0];
+        const key = apiKey?.trim() || null;
+        setCloudSaveState('saving');
+        try {
+            await invoke('api_save_transcript_config', { provider: 'deepgram', model, apiKey: key });
+            setTranscriptModelConfig({ ...transcriptModelConfig, provider: 'deepgram', model, apiKey: key });
+            setIsApiKeyLocked(true);
+            setCloudSaveState('saved');
+            onModelSelect?.();
+        } catch (err) {
+            console.error('Failed to save Deepgram settings:', err);
+            setCloudSaveState('error');
+        }
+    };
 
     const handleInputClick = () => {
         if (isApiKeyLocked) {
@@ -112,6 +133,7 @@ export function TranscriptSettings({ transcriptModelConfig, setTranscriptModelCo
                                 onValueChange={(value) => {
                                     const provider = value as TranscriptModelProps['provider'];
                                     setUiProvider(provider);
+                                    setCloudSaveState('idle');
                                     if (provider !== 'localWhisper' && provider !== 'parakeet') {
                                         fetchApiKey(provider);
                                     }
@@ -123,8 +145,8 @@ export function TranscriptSettings({ transcriptModelConfig, setTranscriptModelCo
                                 <SelectContent>
                                     <SelectItem value="parakeet">⚡ Parakeet (Recommended - Real-time / Accurate)</SelectItem>
                                     <SelectItem value="localWhisper">🏠 Local Whisper (High Accuracy)</SelectItem>
-                                    {/* <SelectItem value="deepgram">☁️ Deepgram (Backup)</SelectItem>
-                                    <SelectItem value="elevenLabs">☁️ ElevenLabs</SelectItem>
+                                    <SelectItem value="deepgram">☁️ Deepgram (cloud, most accurate)</SelectItem>
+                                    {/* <SelectItem value="elevenLabs">☁️ ElevenLabs</SelectItem>
                                     <SelectItem value="groq">☁️ Groq</SelectItem>
                                     <SelectItem value="openai">☁️ OpenAI</SelectItem> */}
                                 </SelectContent>
@@ -132,7 +154,7 @@ export function TranscriptSettings({ transcriptModelConfig, setTranscriptModelCo
 
                             {uiProvider !== 'localWhisper' && uiProvider !== 'parakeet' && (
                                 <Select
-                                    value={transcriptModelConfig.model}
+                                    value={transcriptModelConfig.provider === uiProvider ? transcriptModelConfig.model : modelOptions[uiProvider][0]}
                                     onValueChange={(value) => {
                                         const model = value as TranscriptModelProps['model'];
                                         setTranscriptModelConfig({ ...transcriptModelConfig, provider: uiProvider, model });
@@ -217,6 +239,28 @@ export function TranscriptSettings({ transcriptModelConfig, setTranscriptModelCo
                                     </Button>
                                 </div>
                             </div>
+                            {uiProvider === 'deepgram' && (
+                                <div className="mx-1 mt-3 space-y-2">
+                                    <p className="text-xs text-gray-500">
+                                        Speech is sent to Deepgram for transcription. Audio files stay on this computer.
+                                    </p>
+                                    <div className="flex items-center gap-3">
+                                        <Button
+                                            type="button"
+                                            onClick={saveDeepgramConfig}
+                                            disabled={cloudSaveState === 'saving' || !apiKey?.trim()}
+                                        >
+                                            {cloudSaveState === 'saving' ? 'Saving…' : 'Use Deepgram'}
+                                        </Button>
+                                        {cloudSaveState === 'saved' && (
+                                            <span className="text-sm text-green-600">Saved. New recordings use Deepgram.</span>
+                                        )}
+                                        {cloudSaveState === 'error' && (
+                                            <span className="text-sm text-red-600">Could not save. Check the logs.</span>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>

@@ -135,6 +135,17 @@ pub async fn validate_transcription_model_ready<R: Runtime>(app: &AppHandle<R>) 
                 }
             }
         }
+        "deepgram" => {
+            // Fork: cloud provider, nothing to load. Only the key is required;
+            // whether Deepgram accepts it shows up on the first request.
+            match config.api_key.as_deref().map(str::trim) {
+                Some(key) if !key.is_empty() => {
+                    info!("✅ Deepgram configured (model {})", config.model);
+                    Ok(())
+                }
+                _ => Err("Deepgram is selected but no API key is saved. Add it in Settings > Transcription.".to_string()),
+            }
+        }
         other => {
             warn!("❌ Unsupported transcription provider for local recording: {}", other);
             Err(format!(
@@ -211,6 +222,14 @@ pub async fn get_or_init_transcription_engine<R: Runtime>(
                     Err("Parakeet engine not initialized. This should not happen after validation.".to_string())
                 }
             }
+        }
+        "deepgram" => {
+            info!("☁️ Initializing Deepgram transcription provider (model {})", config.model);
+            let provider = super::deepgram_provider::DeepgramProvider::new(
+                config.api_key.clone().unwrap_or_default(),
+                Some(config.model.clone()),
+            )?;
+            Ok(TranscriptionEngine::Provider(Arc::new(provider)))
         }
         "localWhisper" | _ => {
             info!("🎤 Initializing Whisper transcription engine");
