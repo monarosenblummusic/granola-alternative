@@ -834,6 +834,7 @@ pub fn run() {
             final_notes::api_export_final_notes,
             final_notes::api_open_final_notes_folder,
             final_notes::api_choose_final_notes_folder,
+            final_notes::api_install_claude_extension,
             // Import audio commands
             audio::import::select_and_validate_audio_command,
             audio::import::validate_audio_file_command,

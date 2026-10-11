@@ -1,0 +1,46 @@
+{
+  "manifest_version": "0.3",
+  "name": "finalnotes-readonly",
+  "display_name": "FinalNotes (read-only)",
+  "version": "1.0.0",
+  "description": "Lets Claude search and read your exported meeting notes. Read-only, limited to the FinalNotes folder.",
+  "long_description": "Runs the official MCP filesystem server (@modelcontextprotocol/server-filesystem) on your FinalNotes folder and passes through only its read tools. Writing, editing, moving and creating files is refused, and the folder cannot be widened through MCP roots.",
+  "author": {
+    "name": "Meeting Notes"
+  },
+  "license": "MIT",
+  "keywords": ["meetings", "notes", "transcripts", "read-only"],
+  "server": {
+    "type": "node",
+    "entry_point": "server/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/server/index.js", "${user_config.notes_folder}"]
+    }
+  },
+  "tools": [
+    { "name": "read_text_file", "description": "Read a meeting file" },
+    { "name": "read_multiple_files", "description": "Read several meeting files at once" },
+    { "name": "search_files", "description": "Find meeting files by name" },
+    { "name": "list_directory", "description": "List meeting files" },
+    { "name": "list_directory_with_sizes", "description": "List meeting files with sizes" },
+    { "name": "directory_tree", "description": "Show the folder tree" },
+    { "name": "get_file_info", "description": "File dates and size" },
+    { "name": "list_allowed_directories", "description": "Show the FinalNotes folder path" },
+    { "name": "read_media_file", "description": "Read an image or audio file" },
+    { "name": "read_file", "description": "Read a meeting file (older name of read_text_file)" }
+  ],
+  "user_config": {
+    "notes_folder": {
+      "type": "directory",
+      "title": "FinalNotes folder",
+      "description": "The folder the Meeting Notes app exports to (Settings > General > FinalNotes export).",
+      "required": true,
+      "default": "${DOCUMENTS}/FinalNotes"
+    }
+  },
+  "compatibility": {
+    "platforms": ["win32", "darwin", "linux"],
+    "runtimes": { "node": ">=18.0.0" }
+  }
+}

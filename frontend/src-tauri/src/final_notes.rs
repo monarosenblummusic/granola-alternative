@@ -463,10 +463,8 @@ pub async fn api_choose_final_notes_folder<R: Runtime>(app: AppHandle<R>) -> Res
     Ok(picker.blocking_pick_folder().map(|p| p.to_string()))
 }
 
-#[tauri::command]
-pub async fn api_open_final_notes_folder<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
-    let folder = load_settings(&app).folder;
-    fs::create_dir_all(&folder).map_err(|e| format!("Could not create {}: {}", folder.display(), e))?;
+/// Open a folder, or a file with its default app.
+fn open_path(path: &Path) -> Result<(), String> {
     #[cfg(target_os = "windows")]
     let opener = "explorer";
     #[cfg(target_os = "macos")]
@@ -474,10 +472,45 @@ pub async fn api_open_final_notes_folder<R: Runtime>(app: AppHandle<R>) -> Resul
     #[cfg(not(any(target_os = "windows", target_os = "macos")))]
     let opener = "xdg-open";
     std::process::Command::new(opener)
-        .arg(&folder)
+        .arg(path)
         .spawn()
-        .map_err(|e| format!("Could not open {}: {}", folder.display(), e))?;
+        .map_err(|e| format!("Could not open {}: {}", path.display(), e))?;
     Ok(())
+}
+
+#[tauri::command]
+pub async fn api_open_final_notes_folder<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
+    let folder = load_settings(&app).folder;
+    fs::create_dir_all(&folder).map_err(|e| format!("Could not create {}: {}", folder.display(), e))?;
+    open_path(&folder)
+}
+
+#[derive(Serialize)]
+pub struct ClaudeExtension {
+    pub extension_path: String,
+    pub folder: String,
+}
+
+/// Open the bundled Claude Desktop extension (built from
+/// mcp/finalnotes-readonly) so Claude Desktop offers to install it. The
+/// extension gives Claude read-only access to the FinalNotes folder.
+#[tauri::command]
+pub async fn api_install_claude_extension<R: Runtime>(app: AppHandle<R>) -> Result<ClaudeExtension, String> {
+    use tauri::path::BaseDirectory;
+    let extension = app
+        .path()
+        .resolve("resources/finalnotes-readonly.mcpb", BaseDirectory::Resource)
+        .map_err(|e| format!("Could not find the Claude extension: {}", e))?;
+    if !extension.exists() {
+        return Err("This build does not include the Claude extension.".to_string());
+    }
+    let folder = load_settings(&app).folder;
+    fs::create_dir_all(&folder).map_err(|e| format!("Could not create {}: {}", folder.display(), e))?;
+    open_path(&extension)?;
+    Ok(ClaudeExtension {
+        extension_path: extension.to_string_lossy().to_string(),
+        folder: folder.to_string_lossy().to_string(),
+    })
 }
 
 #[cfg(test)]

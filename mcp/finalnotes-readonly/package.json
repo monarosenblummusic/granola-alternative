@@ -1,0 +1,22 @@
+{
+  "name": "finalnotes-readonly-mcp",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Read-only MCP access to the FinalNotes folder through the official filesystem server",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node --test test/filter.test.js test/end-to-end.test.js",
+    "pack": "mcpb pack . finalnotes-readonly.mcpb"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/server-filesystem": "2026.8.31"
+  },
+  "devDependencies": {
+    "@anthropic-ai/mcpb": "2.1.2",
+    "@modelcontextprotocol/sdk": "1.32.1"
+  }
+}

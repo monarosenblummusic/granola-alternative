@@ -667,6 +667,23 @@ jobs:
           cd frontend
           pnpm install --frozen-lockfile
 
+      # Fork: read-only Claude Desktop extension for the FinalNotes folder.
+      # Tested on Windows against the real official filesystem server, then
+      # packed into src-tauri/resources so it ships inside the installer.
+      - name: Test FinalNotes Claude extension
+        shell: bash
+        run: |
+          cd mcp/finalnotes-readonly
+          npm ci --no-audit --no-fund
+          npm test
+
+      - name: Build FinalNotes Claude extension
+        shell: bash
+        run: |
+          cd frontend
+          pnpm run build:mcpb
+          test -f src-tauri/resources/finalnotes-readonly.mcpb
+
       - name: Build llama-helper sidecar
         shell: pwsh
         run: |
@@ -734,6 +751,14 @@ jobs:
             target/x86_64-pc-windows-msvc/${{ steps.build-profile.outputs.profile }}/bundle/msi/*.msi.sig
             target/x86_64-pc-windows-msvc/${{ steps.build-profile.outputs.profile }}/bundle/nsis/*.exe
             target/x86_64-pc-windows-msvc/${{ steps.build-profile.outputs.profile }}/bundle/nsis/*.exe.sig
+          retention-days: 30
+
+      - name: Upload Claude extension
+        if: ${{ github.event_name == 'push' || github.event.inputs.upload-artifacts == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: finalnotes-claude-extension-${{ steps.get-version.outputs.version }}
+          path: frontend/src-tauri/resources/finalnotes-readonly.mcpb
           retention-days: 30
 
       - name: Generate build summary

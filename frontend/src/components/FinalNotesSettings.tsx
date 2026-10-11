@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { FolderOpen, FolderInput } from 'lucide-react';
+import { FolderOpen, FolderInput, PlugZap } from 'lucide-react';
 import { toast } from 'sonner';
 import { Switch } from './ui/switch';
 import {
   chooseFinalNotesFolder,
+  ClaudeExtension,
   FinalNotesSettings as Settings,
+  installClaudeExtension,
   getFinalNotesSettings,
   openFinalNotesFolder,
   saveFinalNotesSettings,
@@ -15,6 +17,7 @@ import {
 /** Fork: where meeting notes are exported for Claude, and whether it happens automatically. */
 export function FinalNotesSettings() {
   const [settings, setSettings] = useState<Settings | null>(null);
+  const [extension, setExtension] = useState<ClaudeExtension | null>(null);
 
   useEffect(() => {
     getFinalNotesSettings()
@@ -35,6 +38,23 @@ export function FinalNotesSettings() {
     try {
       const folder = await chooseFinalNotesFolder();
       if (folder) await update({ ...settings, folder });
+    } catch (err) {
+      toast.error(String(err));
+    }
+  };
+
+  const connectClaude = async () => {
+    try {
+      const result = await installClaudeExtension();
+      setExtension(result);
+      try {
+        await navigator.clipboard.writeText(result.folder);
+      } catch {
+        // Clipboard is a convenience; the path is shown below as well.
+      }
+      toast.success('Opening Claude Desktop', {
+        description: 'Install "FinalNotes (read-only)". The folder path is copied in case Claude asks for it.',
+      });
     } catch (err) {
       toast.error(String(err));
     }
@@ -78,6 +98,28 @@ export function FinalNotesSettings() {
             Open Folder
           </button>
         </div>
+      </div>
+
+      <div className="mt-4 p-4 border rounded-lg bg-gray-50">
+        <div className="font-medium mb-1">Claude Desktop</div>
+        <p className="text-sm text-gray-600 mb-3">
+          Let Claude search and read these files. Claude gets read-only access to this folder and nothing else.
+        </p>
+        <button
+          onClick={() => void connectClaude()}
+          className="flex items-center gap-2 px-3 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-100 transition-colors"
+        >
+          <PlugZap className="w-4 h-4" />
+          Connect Claude Desktop
+        </button>
+        {extension && (
+          <p className="mt-3 text-xs text-gray-600">
+            In Claude Desktop, install <strong>FinalNotes (read-only)</strong> and choose{' '}
+            <span className="font-mono break-all">{extension.folder}</span> as the folder. If Claude Desktop did not
+            open, go to Settings &gt; Extensions &gt; Install Extension and pick{' '}
+            <span className="font-mono break-all">{extension.extension_path}</span>.
+          </p>
+        )}
       </div>
     </div>
   );

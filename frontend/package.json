@@ -4,6 +4,7 @@
     "private": true,
     "main": "electron/main.js",
     "scripts": {
+      "build:mcpb": "node scripts/build-mcpb.mjs",
         "dev": "next dev -p 3118",
         "build": "next build",
         "export": "next export",

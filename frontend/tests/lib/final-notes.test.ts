@@ -37,3 +37,10 @@ describe('FinalNotes', () => {
     expect(finalNotes.fileNameOf('a.md')).toBe('a.md');
   });
 });
+
+describe('Claude extension', () => {
+  test('connect opens the bundled extension through the app', async () => {
+    await finalNotes.installClaudeExtension();
+    expect(calls).toEqual([{ command: 'api_install_claude_extension', args: undefined }]);
+  });
+});

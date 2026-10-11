@@ -35,6 +35,19 @@ export function exportFinalNotes(meetingId: string): Promise<string> {
   return invoke<string>('api_export_final_notes', { meetingId });
 }
 
+export interface ClaudeExtension {
+  extension_path: string;
+  folder: string;
+}
+
+/**
+ * Open the bundled Claude Desktop extension ("FinalNotes (read-only)") so
+ * Claude Desktop offers to install it.
+ */
+export function installClaudeExtension(): Promise<ClaudeExtension> {
+  return invoke<ClaudeExtension>('api_install_claude_extension');
+}
+
 /** File name from a full path, for short messages. */
 export function fileNameOf(path: string): string {
   return path.split(/[\\/]/).pop() || path;

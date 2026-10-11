@@ -77,3 +77,8 @@ experiments/
 target/
 
 frontend/src-tauri/binaries/
+# FinalNotes MCP extension build output
+mcp/finalnotes-readonly/node_modules/
+mcp/finalnotes-readonly/*.mcpb
+frontend/src-tauri/resources/finalnotes-readonly.mcpb
+mcp/finalnotes-readonly/.build/
