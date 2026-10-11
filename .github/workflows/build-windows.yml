@@ -1,6 +1,13 @@
 name: "Build and Test - Windows"
 
 on:
+  # Fork: unsigned release build on every push to dev, so test installers
+  # exist without manual dispatch.
+  push:
+    branches: [dev]
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
   workflow_dispatch:
     inputs:
       build-type:
@@ -718,10 +725,10 @@ jobs:
           find target/x86_64-pc-windows-msvc/${{ steps.build-profile.outputs.profile }}/bundle -type f \( -name "*.msi" -o -name "*.exe" \) -exec ls -lh {} \;
 
       - name: Upload artifacts
-        if: ${{ github.event.inputs.upload-artifacts == 'true' }}
+        if: ${{ github.event_name == 'push' || github.event.inputs.upload-artifacts == 'true' }}
         uses: actions/upload-artifact@v4
         with:
-          name: meetily-windows-x64-${{ steps.build-profile.outputs.profile }}-${{ steps.get-version.outputs.version }}
+          name: meeting-notes-windows-x64-${{ steps.build-profile.outputs.profile }}-${{ steps.get-version.outputs.version }}
           path: |
             target/x86_64-pc-windows-msvc/${{ steps.build-profile.outputs.profile }}/bundle/msi/*.msi
             target/x86_64-pc-windows-msvc/${{ steps.build-profile.outputs.profile }}/bundle/msi/*.msi.sig
