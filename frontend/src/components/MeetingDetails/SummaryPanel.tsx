@@ -7,6 +7,7 @@ import { ModelConfig } from '@/components/ModelSettingsModal';
 import { SummaryGeneratorButtonGroup } from './SummaryGeneratorButtonGroup';
 import { SummaryUpdaterButtonGroup } from './SummaryUpdaterButtonGroup';
 import { MyNotesSection } from './MyNotesSection';
+import { ExportFinalNotesButton } from './ExportFinalNotesButton';
 import Analytics from '@/lib/analytics';
 import { useEffect, useRef, useState, RefObject } from 'react';
 import { toast } from 'sonner';
@@ -264,6 +265,15 @@ export function SummaryPanel({
               isModelConfigLoading={isModelConfigLoading}
               onOpenModelSettings={onOpenModelSettings}
               languageSlot={transcripts.length > 0 || hasSummary ? languageSlot : undefined}
+            />
+          </div>
+
+          {/* Fork: FinalNotes export */}
+          <div className="flex-shrink-0">
+            <ExportFinalNotesButton
+              meetingId={meeting.id}
+              disabled={isSummaryLoading || transcripts.length === 0}
+              beforeExport={isSummaryDirty ? onSaveAll : undefined}
             />
           </div>
 

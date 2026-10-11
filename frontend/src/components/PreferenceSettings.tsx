@@ -6,6 +6,7 @@ import { FolderOpen } from "lucide-react"
 import { invoke } from "@tauri-apps/api/core"
 import Analytics from "@/lib/analytics"
 import AnalyticsConsentSwitch from "./AnalyticsConsentSwitch"
+import { FinalNotesSettings } from "./FinalNotesSettings"
 import { useConfig, NotificationSettings } from "@/contexts/ConfigContext"
 
 export function PreferenceSettings() {
@@ -219,6 +220,9 @@ export function PreferenceSettings() {
           </p>
         </div>
       </div>
+
+      {/* Fork: FinalNotes export */}
+      <FinalNotesSettings />
 
       {/* Analytics Section */}
       <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">

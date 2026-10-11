@@ -41,6 +41,7 @@ pub mod audio;
 pub mod config;
 pub mod console_utils;
 pub mod database;
+pub mod final_notes;
 pub mod notifications;
 pub mod ollama;
 pub mod onboarding;
@@ -828,6 +829,11 @@ pub fn run() {
             audio::speaker_identification::api_rename_speaker,
             database::commands::api_get_meeting_notes,
             database::commands::api_save_meeting_notes,
+            final_notes::api_get_final_notes_settings,
+            final_notes::api_save_final_notes_settings,
+            final_notes::api_export_final_notes,
+            final_notes::api_open_final_notes_folder,
+            final_notes::api_choose_final_notes_folder,
             // Import audio commands
             audio::import::select_and_validate_audio_command,
             audio::import::validate_audio_file_command,

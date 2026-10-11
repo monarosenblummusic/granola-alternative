@@ -294,6 +294,7 @@ pub async fn api_get_meeting_notes(
 /// Fork: save the meeting's notepad text. Blank text deletes the notes.
 #[tauri::command]
 pub async fn api_save_meeting_notes(
+    app: AppHandle,
     state: tauri::State<'_, AppState>,
     meeting_id: String,
     notes: String,
@@ -303,5 +304,7 @@ pub async fn api_save_meeting_notes(
     }
     crate::database::repositories::meeting_notes::MeetingNotesRepository::save(state.db_manager.pool(), &meeting_id, &notes)
         .await
-        .map_err(|e| format!("Could not save notes: {}", e))
+        .map_err(|e| format!("Could not save notes: {}", e))?;
+    crate::final_notes::auto_export(&app, &meeting_id, crate::final_notes::Trigger::Changed);
+    Ok(())
 }

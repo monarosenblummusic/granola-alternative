@@ -637,6 +637,7 @@ impl SummaryService {
                             }
                         }
                         info!("Summary saved successfully for meeting_id: {}", meeting_id);
+                        crate::final_notes::auto_export(&_app, &meeting_id, crate::final_notes::Trigger::SummaryReady);
                     }
                     Ok(false) => warn!("Skipped stale summary completion for meeting_id: {}", meeting_id),
                     Err(error) => error!(

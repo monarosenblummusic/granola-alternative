@@ -337,6 +337,7 @@ pub async fn identify_speakers_command<R: Runtime>(
         match run(&app, &meeting_id, Path::new(&meeting_folder_path)).await {
             Ok(result) => {
                 let _ = app.emit("speaker-identification-complete", &result);
+                crate::final_notes::auto_export(&app, &meeting_id, crate::final_notes::Trigger::Changed);
             }
             Err(e) => {
                 warn!("Speaker identification failed for {}: {}", meeting_id, e);
@@ -376,6 +377,7 @@ pub async fn api_rename_speaker<R: Runtime>(
         .await
         .map_err(|e| format!("Could not rename speaker: {}", e))?;
     let _ = app.emit("speaker-names-changed", serde_json::json!({ "meeting_id": meeting_id }));
+    crate::final_notes::auto_export(&app, &meeting_id, crate::final_notes::Trigger::Changed);
     Ok(name)
 }
 

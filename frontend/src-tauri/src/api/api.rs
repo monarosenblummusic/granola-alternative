@@ -764,6 +764,7 @@ pub async fn api_delete_meeting<R: Runtime>(
     match MeetingsRepository::delete_meeting(pool, &meeting_id).await {
         Ok(true) => {
             log_info!("Successfully deleted meeting {}", meeting_id);
+            crate::final_notes::remove_export(&_app, &meeting_id);
             Ok(serde_json::json!({
                 "status": "success",
                 "message": "Meeting deleted successfully"
@@ -920,6 +921,7 @@ pub async fn api_save_meeting_title<R: Runtime>(
     match MeetingsRepository::update_meeting_title(pool, &meeting_id, &title).await {
         Ok(true) => {
             log_info!("Successfully saved meeting title");
+            crate::final_notes::auto_export(&_app, &meeting_id, crate::final_notes::Trigger::Changed);
             Ok(serde_json::json!({"message": "Meeting title saved successfully"}))
         }
         Ok(false) => {
