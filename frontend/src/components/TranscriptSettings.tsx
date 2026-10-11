@@ -242,7 +242,7 @@ export function TranscriptSettings({ transcriptModelConfig, setTranscriptModelCo
                             {uiProvider === 'deepgram' && (
                                 <div className="mx-1 mt-3 space-y-2">
                                     <p className="text-xs text-gray-500">
-                                        Speech is sent to Deepgram for transcription. Audio files stay on this computer.
+                                        Speech is sent to Deepgram for transcription, and after each meeting the recording is sent once more to tell speakers apart. Your copy of the recording stays on this computer.
                                     </p>
                                     <div className="flex items-center gap-3">
                                         <Button

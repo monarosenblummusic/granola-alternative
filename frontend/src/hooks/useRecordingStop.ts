@@ -8,6 +8,7 @@ import { useRecordingState, RecordingStatus } from '@/contexts/RecordingStateCon
 import { storageService } from '@/services/storageService';
 import { transcriptService } from '@/services/transcriptService';
 import Analytics from '@/lib/analytics';
+import { autoIdentifySpeakers } from '@/lib/speakerIdentification';
 import {
   applyPinnedSummaryLanguageToMeeting,
   detectAndCacheSummaryLanguage,
@@ -295,6 +296,11 @@ export function useRecordingStop(
 
           // Mark meeting as saved in IndexedDB (for recovery system)
           await markMeetingAsSaved();
+
+          // Fork: with Deepgram selected, tell the other speakers apart now.
+          if (folderPath) {
+            void autoIdentifySpeakers(meetingId, folderPath);
+          }
 
           // Clean up session storage
           sessionStorage.removeItem('last_recording_folder_path');
