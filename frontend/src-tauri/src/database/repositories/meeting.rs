@@ -75,7 +75,11 @@ impl MeetingsRepository {
         if let Some(meeting) = meeting {
             // Get all transcripts for this meeting
             let transcripts =
-                sqlx::query_as::<_, Transcript>("SELECT * FROM transcripts WHERE meeting_id = ?")
+                sqlx::query_as::<_, Transcript>(
+                    // Fork: mic and system lines are transcribed in parallel, so
+                    // insertion order no longer implies time order.
+                    "SELECT * FROM transcripts WHERE meeting_id = ? ORDER BY audio_start_time ASC",
+                )
                     .bind(meeting_id)
                     .fetch_all(&mut *transaction)
                     .await?;
@@ -92,6 +96,7 @@ impl MeetingsRepository {
                     audio_start_time: t.audio_start_time,
                     audio_end_time: t.audio_end_time,
                     duration: t.duration,
+                    speaker: t.speaker,
                 })
                 .collect::<Vec<_>>();
 

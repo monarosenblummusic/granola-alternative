@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { TranscriptSegmentData } from '@/types';
+import { withSpeakerLabel } from '@/lib/speaker';
 
 const INTERVAL_MS = 15; // Character reveal interval
 const DURATION_MS = 800; // Total streaming duration
@@ -110,10 +111,10 @@ export function useTranscriptStreaming(
    * Get the display text for a segment, with streaming effect if applicable
    */
   const getDisplayText = (segment: TranscriptSegmentData): string => {
-    if (streamingSegment && segment.id === streamingSegment.id) {
-      return streamingSegment.visibleText;
-    }
-    return segment.text;
+    const text = streamingSegment && segment.id === streamingSegment.id
+      ? streamingSegment.visibleText
+      : segment.text;
+    return withSpeakerLabel(segment.speaker, text);
   };
 
   return {
