@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { withSpeakerLabel } from '@/lib/speaker';
+import { withSpeakerLabel, SpeakerNames } from '@/lib/speaker';
 import {
   CancelSummaryResponse,
   MeetingSummary,
@@ -80,6 +80,7 @@ interface UseSummaryGenerationProps {
   updateMeetingTitle: (title: string) => void;
   setAiSummary: (summary: MeetingSummary | null) => void;
   onOpenModelSettings?: () => void;
+  speakerNames?: SpeakerNames;
 }
 
 export function useSummaryGeneration({
@@ -93,6 +94,7 @@ export function useSummaryGeneration({
   updateMeetingTitle,
   setAiSummary,
   onOpenModelSettings,
+  speakerNames,
 }: UseSummaryGenerationProps) {
   const restored = initialSummary?.meeting_id === meeting.id ? initialSummary : null;
   const [summaryStatus, setSummaryStatus] = useState<SummaryStatus>(() => restoredSummaryStatus(restored));
@@ -445,11 +447,11 @@ export function useSummaryGeneration({
 
     return {
       transcriptText: allTranscripts
-        .map((transcript) => `${formatTime(transcript.audio_start_time, transcript.timestamp)} ${withSpeakerLabel(transcript.speaker, transcript.text)}`)
+        .map((transcript) => `${formatTime(transcript.audio_start_time, transcript.timestamp)} ${withSpeakerLabel(transcript.speaker, transcript.text, speakerNames)}`)
         .join('\n'),
       transcriptTexts: allTranscripts.map((transcript) => transcript.text),
     };
-  }, []);
+  }, [speakerNames]);
 
   const showPreflightError = useCallback((message: string) => {
     setSummaryError(message);

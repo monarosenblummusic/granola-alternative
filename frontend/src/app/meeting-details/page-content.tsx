@@ -16,6 +16,7 @@ import { useMeetingData } from '@/hooks/meeting-details/useMeetingData';
 import { useSummaryGeneration } from '@/hooks/meeting-details/useSummaryGeneration';
 import { useTemplates } from '@/hooks/meeting-details/useTemplates';
 import { useCopyOperations } from '@/hooks/meeting-details/useCopyOperations';
+import { useSpeakerNames } from '@/hooks/meeting-details/useSpeakerNames';
 import { useMeetingOperations } from '@/hooks/meeting-details/useMeetingOperations';
 import { useConfig } from '@/contexts/ConfigContext';
 
@@ -116,6 +117,8 @@ export default function PageContent({
     }
   };
 
+  const speakerNames = useSpeakerNames(meeting.id);
+
   const summaryGeneration = useSummaryGeneration({
     initialSummary,
     meeting,
@@ -127,6 +130,7 @@ export default function PageContent({
     updateMeetingTitle: meetingData.updateMeetingTitle,
     setAiSummary: meetingData.setAiSummary,
     onOpenModelSettings: handleOpenModelSettings,
+    speakerNames,
   });
 
   const copyOperations = useCopyOperations({
@@ -135,6 +139,7 @@ export default function PageContent({
     meetingTitle: meetingData.meetingTitle,
     aiSummary: meetingData.aiSummary,
     blockNoteSummaryRef: meetingData.blockNoteSummaryRef,
+    speakerNames,
   });
 
   const meetingOperations = useMeetingOperations({
@@ -218,6 +223,7 @@ export default function PageContent({
               meetingId={meeting.id}
               meetingFolderPath={meeting.folder_path}
               onRefetchTranscripts={onRefetchTranscripts}
+              speakerNames={speakerNames}
             />
           }
           summary={

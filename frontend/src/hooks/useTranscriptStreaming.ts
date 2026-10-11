@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { TranscriptSegmentData } from '@/types';
-import { withSpeakerLabel } from '@/lib/speaker';
+import { withSpeakerLabel, SpeakerNames } from '@/lib/speaker';
 
 const INTERVAL_MS = 15; // Character reveal interval
 const DURATION_MS = 800; // Total streaming duration
@@ -19,7 +19,8 @@ interface StreamingSegment {
 export function useTranscriptStreaming(
   segments: TranscriptSegmentData[],
   isRecording: boolean,
-  enableStreaming: boolean
+  enableStreaming: boolean,
+  speakerNames?: SpeakerNames
 ) {
   const [streamingSegment, setStreamingSegment] = useState<StreamingSegment | null>(null);
   const lastSegmentIdRef = useRef<string | null>(null);
@@ -114,7 +115,7 @@ export function useTranscriptStreaming(
     const text = streamingSegment && segment.id === streamingSegment.id
       ? streamingSegment.visibleText
       : segment.text;
-    return withSpeakerLabel(segment.speaker, text);
+    return withSpeakerLabel(segment.speaker, text, speakerNames);
   };
 
   return {

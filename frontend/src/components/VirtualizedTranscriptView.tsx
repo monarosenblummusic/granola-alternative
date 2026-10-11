@@ -9,6 +9,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { RecordingStatusBar } from "./RecordingStatusBar";
 import { motion, AnimatePresence } from "framer-motion";
 import { TranscriptSegmentData } from "@/types";
+import type { SpeakerNames } from "@/lib/speaker";
 
 export interface VirtualizedTranscriptViewProps {
     /** Transcript segments to display */
@@ -34,6 +35,9 @@ export interface VirtualizedTranscriptViewProps {
     totalCount?: number;
     loadedCount?: number;
     onLoadMore?: () => void;
+
+    /** Fork: names the user gave this meeting's speakers */
+    speakerNames?: SpeakerNames;
 }
 
 // Threshold for enabling virtualization (below this, use simple rendering)
@@ -124,6 +128,7 @@ export const VirtualizedTranscriptView: React.FC<VirtualizedTranscriptViewProps>
     totalCount = 0,
     loadedCount = 0,
     onLoadMore,
+    speakerNames,
 }) => {
     // Create scroll ref first - shared between virtualizer and auto-scroll hook
     const scrollRef = useRef<HTMLDivElement>(null);
@@ -161,7 +166,8 @@ export const VirtualizedTranscriptView: React.FC<VirtualizedTranscriptViewProps>
     const { streamingSegmentId, getDisplayText } = useTranscriptStreaming(
         segments,
         isRecording,
-        enableStreaming
+        enableStreaming,
+        speakerNames
     );
 
     // Infinite scroll: IntersectionObserver to trigger loading more

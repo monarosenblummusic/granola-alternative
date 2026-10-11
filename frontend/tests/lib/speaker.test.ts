@@ -19,3 +19,22 @@ describe('speaker labels', () => {
     expect(withSpeakerLabel('mic', 'hi')).toBe('Me: hi');
   });
 });
+
+describe('speaker names', () => {
+  const names = { mic: 'Moshe', 'Speaker 1': 'Dana', 'Speaker 2': '  ' };
+
+  test('a chosen name replaces the default label', () => {
+    expect(withSpeakerLabel('mic', 'hi', names)).toBe('Moshe: hi');
+    expect(withSpeakerLabel('Speaker 1', 'hi', names)).toBe('Dana: hi');
+  });
+
+  test('unnamed or blank-named speakers keep their default label', () => {
+    expect(speakerLabel('Speaker 2', names)).toBe('Speaker 2');
+    expect(speakerLabel('system', names)).toBe('Them');
+    expect(speakerLabel(undefined, names)).toBe('');
+  });
+
+  test('names never label lines that have no speaker', () => {
+    expect(withSpeakerLabel('', 'hi', { '': 'Ghost' })).toBe('hi');
+  });
+});

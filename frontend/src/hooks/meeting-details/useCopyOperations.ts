@@ -1,5 +1,5 @@
 import { useCallback, RefObject } from 'react';
-import { withSpeakerLabel } from '@/lib/speaker';
+import { withSpeakerLabel, SpeakerNames } from '@/lib/speaker';
 import { MeetingSummary, Transcript } from '@/types';
 import { BlockNoteSummaryViewRef } from '@/components/AISummary/BlockNoteSummaryView';
 import { toast } from 'sonner';
@@ -13,6 +13,7 @@ interface UseCopyOperationsProps {
   meetingTitle: string;
   aiSummary: MeetingSummary | null;
   blockNoteSummaryRef: RefObject<BlockNoteSummaryViewRef>;
+  speakerNames?: SpeakerNames;
 }
 
 export function useCopyOperations({
@@ -21,6 +22,7 @@ export function useCopyOperations({
   meetingTitle,
   aiSummary,
   blockNoteSummaryRef,
+  speakerNames,
 }: UseCopyOperationsProps) {
 
   // Helper function to fetch ALL transcripts for copying (not just paginated data)
@@ -88,7 +90,7 @@ export function useCopyOperations({
     const header = `# Transcript of the Meeting: ${meeting.id} - ${meetingTitle ?? meeting.title}\n\n`;
     const date = `## Date: ${new Date(meeting.created_at).toLocaleDateString()}\n\n`;
     const fullTranscript = allTranscripts
-      .map(t => `${formatTime(t.audio_start_time, t.timestamp)} ${withSpeakerLabel(t.speaker, t.text)}  `)
+      .map(t => `${formatTime(t.audio_start_time, t.timestamp)} ${withSpeakerLabel(t.speaker, t.text, speakerNames)}  `)
       .join('\n');
 
     await navigator.clipboard.writeText(header + date + fullTranscript);
@@ -104,7 +106,7 @@ export function useCopyOperations({
       transcript_length: allTranscripts.length.toString(),
       word_count: wordCount.toString()
     });
-  }, [meeting, meetingTitle, fetchAllTranscripts]);
+  }, [meeting, meetingTitle, fetchAllTranscripts, speakerNames]);
 
   // Copy summary to clipboard
   const handleCopySummary = useCallback(async () => {

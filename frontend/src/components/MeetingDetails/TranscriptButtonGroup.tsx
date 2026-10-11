@@ -6,9 +6,10 @@ import { listen, UnlistenFn } from '@tauri-apps/api/event';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
-import { Copy, FolderOpen, RefreshCw, Users } from 'lucide-react';
+import { Copy, FolderOpen, RefreshCw, UserPen, Users } from 'lucide-react';
 import Analytics from '@/lib/analytics';
 import { RetranscribeDialog } from './RetranscribeDialog';
+import { RenameSpeakersDialog } from './RenameSpeakersDialog';
 import { useConfig } from '@/contexts/ConfigContext';
 
 
@@ -37,6 +38,7 @@ export function TranscriptButtonGroup({
   // after a Deepgram recording (see lib/speakerIdentification.ts) or from the
   // Speakers button; either way this view listens for the result.
   const [identifying, setIdentifying] = useState(false);
+  const [showRenameDialog, setShowRenameDialog] = useState(false);
   const refetchRef = useRef(onRefetchTranscripts);
   refetchRef.current = onRefetchTranscripts;
 
@@ -49,7 +51,9 @@ export function TranscriptButtonGroup({
       listen<{ meeting_id: string; speakers: number }>('speaker-identification-complete', async (e) => {
         if (e.payload.meeting_id !== meetingId) return;
         setIdentifying(false);
-        toast.success(`Found ${e.payload.speakers} other speaker${e.payload.speakers === 1 ? '' : 's'}`);
+        toast.success(`Found ${e.payload.speakers} other speaker${e.payload.speakers === 1 ? '' : 's'}`, {
+          action: { label: 'Name them', onClick: () => setShowRenameDialog(true) },
+        });
         if (refetchRef.current) await refetchRef.current();
       }),
       listen<{ meeting_id: string; error: string }>('speaker-identification-error', (e) => {
@@ -130,6 +134,23 @@ export function TranscriptButtonGroup({
           </Button>
         )}
 
+        {meetingId && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="px-2 @[22rem]:px-4"
+            onClick={() => {
+              Analytics.trackButtonClick('rename_speakers', 'meeting_details');
+              setShowRenameDialog(true);
+            }}
+            disabled={transcriptCount === 0}
+            title="Give the speakers real names"
+          >
+            <UserPen className="@[22rem]:mr-2" size={18} />
+            <span className="hidden @[22rem]:inline">Names</span>
+          </Button>
+        )}
+
         {betaFeatures.importAndRetranscribe && meetingId && meetingFolderPath && (
           <Button
             size="sm"
@@ -146,6 +167,14 @@ export function TranscriptButtonGroup({
           </Button>
         )}
       </ButtonGroup>
+
+      {meetingId && (
+        <RenameSpeakersDialog
+          open={showRenameDialog}
+          onOpenChange={setShowRenameDialog}
+          meetingId={meetingId}
+        />
+      )}
 
       {betaFeatures.importAndRetranscribe && meetingId && meetingFolderPath && (
         <RetranscribeDialog

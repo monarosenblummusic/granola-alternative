@@ -13,6 +13,7 @@
 use crate::api::TranscriptSegment;
 use crate::database::models::Transcript;
 use crate::database::repositories::setting::SettingsRepository;
+use crate::database::repositories::speaker_name::{MeetingSpeaker, SpeakerNameRepository};
 use crate::state::AppState;
 use super::common::write_transcripts_json;
 use super::echo_filter::{echo_indices, Timed};
@@ -297,6 +298,8 @@ async fn run<R: Runtime>(app: &AppHandle<R>, meeting_id: &str, folder: &Path) ->
         .bind(meeting_id)
         .execute(&mut *tx)
         .await?;
+    // "Speaker 1" may be a different person now, so its old name would be wrong.
+    SpeakerNameRepository::clear_remote_names(&mut *tx, meeting_id).await?;
     for s in &segments {
         sqlx::query(
             "INSERT INTO transcripts (id, meeting_id, transcript, timestamp, audio_start_time, audio_end_time, duration, speaker)
@@ -344,6 +347,36 @@ pub async fn identify_speakers_command<R: Runtime>(
         }
     });
     Ok(())
+}
+
+/// Speakers in a meeting's transcript with their current names.
+#[tauri::command]
+pub async fn api_get_meeting_speakers(
+    state: tauri::State<'_, AppState>,
+    meeting_id: String,
+) -> Result<Vec<MeetingSpeaker>, String> {
+    SpeakerNameRepository::list_speakers(state.db_manager.pool(), &meeting_id)
+        .await
+        .map_err(|e| format!("Could not load speakers: {}", e))
+}
+
+/// Name a speaker in one meeting. An empty name restores "Me"/"Them"/"Speaker N".
+#[tauri::command]
+pub async fn api_rename_speaker<R: Runtime>(
+    app: AppHandle<R>,
+    state: tauri::State<'_, AppState>,
+    meeting_id: String,
+    speaker: String,
+    display_name: String,
+) -> Result<Option<String>, String> {
+    if speaker.trim().is_empty() {
+        return Err("Speaker label is missing.".to_string());
+    }
+    let name = SpeakerNameRepository::rename(state.db_manager.pool(), &meeting_id, &speaker, &display_name)
+        .await
+        .map_err(|e| format!("Could not rename speaker: {}", e))?;
+    let _ = app.emit("speaker-names-changed", serde_json::json!({ "meeting_id": meeting_id }));
+    Ok(name)
 }
 
 #[cfg(test)]
