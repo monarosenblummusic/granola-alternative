@@ -15,6 +15,7 @@ use crate::database::models::Transcript;
 use crate::database::repositories::setting::SettingsRepository;
 use crate::state::AppState;
 use super::common::write_transcripts_json;
+use super::echo_filter::{echo_indices, Timed};
 use anyhow::{anyhow, Result};
 use log::{info, warn};
 use serde::{Deserialize, Serialize};
@@ -119,11 +120,29 @@ pub(crate) fn identify_self_speaker(utterances: &[Utterance], mic_lines: &[Line]
 }
 
 /// Keep the mic lines, replace everything else with diarized utterances.
+fn timed(l: &Line) -> Timed<'_> {
+    Timed { start: l.start, end: l.end, text: l.text.as_str() }
+}
+
 pub(crate) fn merge(existing: &[Line], utterances: &[Utterance]) -> Vec<Line> {
-    let mic: Vec<Line> = existing
+    let mic_all: Vec<&Line> = existing
         .iter()
         .filter(|l| l.speaker.as_deref() == Some("mic"))
-        .cloned()
+        .collect();
+    // Drop echoed mic lines (remote speech re-heard through the speakers) so
+    // they can neither be kept as "Me" nor make a remote voice look like you.
+    // Compare against the non-mic lines, which never contain your voice.
+    let others: Vec<Timed> = existing
+        .iter()
+        .filter(|l| l.speaker.as_deref() != Some("mic"))
+        .map(timed)
+        .collect();
+    let echoes = echo_indices(&mic_all.iter().map(|l| timed(l)).collect::<Vec<_>>(), &others);
+    let mic: Vec<Line> = mic_all
+        .into_iter()
+        .enumerate()
+        .filter(|(i, _)| !echoes.contains(i))
+        .map(|(_, l)| l.clone())
         .collect();
     let me = identify_self_speaker(utterances, &mic);
 
@@ -392,6 +411,32 @@ mod tests {
         let out = merge(&[sys(0.0, 3.0, "x")], &[u(0.0, 3.0, 0, "a"), u(3.0, 6.0, 1, "b")]);
         let speakers: Vec<_> = out.iter().map(|l| l.speaker.clone().unwrap()).collect();
         assert_eq!(speakers, vec!["Speaker 1", "Speaker 2"]);
+    }
+
+    #[test]
+    fn echoed_mic_lines_do_not_turn_a_remote_voice_into_me() {
+        // No headset: Alice's words come out of the speakers and are picked up
+        // by the mic, so they appear on both tracks. My real line is 20-24 s.
+        let existing = [
+            sys(0.0, 6.0, "Can everyone see the revenue chart for October?"),
+            mic(0.2, 6.1, "can everyone see the revenue chart for October"),
+            sys(8.0, 14.0, "Margins dropped because shipping costs went up."),
+            mic(8.1, 14.2, "margins dropped because shipping costs went"),
+            mic(20.0, 24.0, "Yes, and we should renegotiate the courier contract."),
+        ];
+        let utts = [
+            u(0.0, 6.0, 0, "Can everyone see the revenue chart for October?"),
+            u(8.0, 14.0, 0, "Margins dropped because shipping costs went up."),
+            u(20.0, 24.0, 1, "Yes, and we should renegotiate the courier contract."),
+        ];
+        let out = merge(&existing, &utts);
+        let got: Vec<(Option<&str>, &str)> =
+            out.iter().map(|l| (l.speaker.as_deref(), l.text.as_str())).collect();
+        assert_eq!(got, vec![
+            (Some("Speaker 1"), "Can everyone see the revenue chart for October?"),
+            (Some("Speaker 1"), "Margins dropped because shipping costs went up."),
+            (Some("mic"), "Yes, and we should renegotiate the courier contract."),
+        ]);
     }
 
     #[test]

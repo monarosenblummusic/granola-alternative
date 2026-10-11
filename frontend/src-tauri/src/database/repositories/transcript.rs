@@ -6,6 +6,27 @@ use uuid::Uuid;
 
 pub struct TranscriptsRepository;
 
+/// Indices (into `segments`) of mic lines that echo a system line.
+fn echo_segment_indices(segments: &[TranscriptSegment]) -> std::collections::HashSet<usize> {
+    use crate::audio::echo_filter::{echo_indices, Timed};
+    fn timed(s: &TranscriptSegment) -> Timed<'_> {
+        let start = s.audio_start_time.unwrap_or(0.0);
+        Timed { start, end: s.audio_end_time.unwrap_or(start), text: s.text.as_str() }
+    }
+    let (mut mic_idx, mut mic, mut system) = (Vec::new(), Vec::new(), Vec::new());
+    for (i, s) in segments.iter().enumerate() {
+        match s.speaker.as_deref() {
+            Some("mic") => {
+                mic_idx.push(i);
+                mic.push(timed(s));
+            }
+            Some("system") => system.push(timed(s)),
+            _ => {}
+        }
+    }
+    echo_indices(&mic, &system).into_iter().map(|i| mic_idx[i]).collect()
+}
+
 impl TranscriptsRepository {
     /// Saves a new meeting and its associated transcript segments.
     /// This function uses a transaction to ensure that either both the meeting
@@ -43,8 +64,18 @@ impl TranscriptsRepository {
 
         info!("Successfully created meeting with id: {}", meeting_id);
 
+        // Fork: without a headset the mic re-hears the call. Drop mic lines that
+        // repeat what the system track said at the same moment.
+        let echoes = echo_segment_indices(transcripts);
+        if !echoes.is_empty() {
+            info!("Dropping {} echoed mic line(s) for meeting {}", echoes.len(), meeting_id);
+        }
+
         // 2. Save each transcript segment with audio timing fields
-        for segment in transcripts {
+        for (index, segment) in transcripts.iter().enumerate() {
+            if echoes.contains(&index) {
+                continue;
+            }
             let transcript_id = format!("transcript-{}", Uuid::new_v4());
             let result = sqlx::query(
                 "INSERT INTO transcripts (id, meeting_id, transcript, timestamp, audio_start_time, audio_end_time, duration, speaker)
@@ -143,5 +174,33 @@ impl TranscriptsRepository {
             }
             None => transcript.chars().take(200).collect(), // Fallback to the start of the transcript
         }
+    }
+}
+
+#[cfg(test)]
+mod echo_tests {
+    use super::*;
+
+    fn seg(start: f64, end: f64, speaker: Option<&str>, text: &str) -> TranscriptSegment {
+        TranscriptSegment {
+            id: format!("{}", start),
+            text: text.to_string(),
+            timestamp: String::new(),
+            audio_start_time: Some(start),
+            audio_end_time: Some(end),
+            duration: Some(end - start),
+            speaker: speaker.map(str::to_string),
+        }
+    }
+
+    #[test]
+    fn only_echoed_mic_lines_are_selected() {
+        let segments = [
+            seg(0.0, 4.0, Some("system"), "Please send me the contract by Monday."),
+            seg(0.1, 4.1, Some("mic"), "please send me the contract by Monday"), // echo
+            seg(5.0, 7.0, Some("mic"), "Sure, I will do that today."),           // real
+            seg(8.0, 9.0, None, "please send me the contract by Monday"),        // legacy, untouched
+        ];
+        assert_eq!(echo_segment_indices(&segments), std::collections::HashSet::from([1]));
     }
 }
